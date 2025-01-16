@@ -152,60 +152,140 @@ def tri (hz=PITCH, duration=DURATION, rate=SAMPLE_RATE, max_harm=10000, random_p
     
     return result
 
-DEMOS = [
+def noise(duration=DURATION, rate=SAMPLE_RATE, shape=None):
+    """
+    Generate N noise samples with the power spectrum
+    optionally shaped by the supplied function.
+    """
+    N = int(duration * SAMPLE_RATE)
+    noise_spectrum = np.fft.rfft(rng.standard_normal(N))
+    
+    if shape is not None:
+        shape_spectrum = shape(np.fft.rfftfreq(N))
+        # normalise to preserve energy
+        shape_spectrum /= np.sqrt(np.mean(shape_spectrum**2))
+        
+        noise_spectrum *= shape_spectrum
+
+    return np.fft.irfft(noise_spectrum);
+
+BLUE = lambda x: np.sqrt(x)
+VIOLET = lambda x: x
+BROWN = lambda x: 1/np.where(x==0, np.inf, x)
+PINK = lambda x: 1/np.where(x==0, np.inf, np.sqrt(x))
+
+def envelope(duration=DURATION, rate=SAMPLE_RATE,
+             attack=0.01, decay=0.05, sustain=0, release=0):
+    """
+    Simple linear ADSR envelope. Attack, decay and sustain are
+    specified in seconds, generated according to the rate. Sustain
+    fills everything not taken up by the other phases. If the
+    duration is insufficient to contain all the elements the
+    excess is discarded.
+    """ 
+    N = duration * rate
+    result = np.full(N, sustain, dtype=float)
+    
+    nR = np.min((int(release * rate), N))
+    if nR:
+        result[(N - nR):] = np.linspace(sustain, 0, nR)
+    
+    nA = int(attack * rate)
+    if nA:
+        result[:nA] = np.linspace(0, 1, nA)
+    
+    nD = np.min((int(decay * rate), N-nA))
+    if nD:
+        result[nA:(nA + nD)] = np.linspace(1, result[np.min((N, nA+nD))], nD)
+    
+    return result
+
+
+SIMPLE = [
     ("Sine wave at 110 Hz", lambda: play(tone())),
     ("Sine wave at 220 Hz", lambda: play(tone(220))),
     ("Sine wave at 440 Hz", lambda: play(tone(440))),
+    ("Sine wave at 880 Hz", lambda: play(tone(880))),
+
+    ("Sine wave at 330 Hz", lambda: play(tone(330))),
+
     ("Sum of equal sines at 110, 220", lambda: play(tones([110,220]))),
     ("Sum of unequal sines 110, 220", lambda: play(tones([110,220], weights=[0.3,0.7], phases=[0, np.pi]))),
     ("Sum of unequal sines 110, 220, 330", lambda: play(tones([110,220,330], weights=[0.2,0.3,0.5], phases=[0, np.pi/2, 2*np.pi/3]))),
-    
+
+    ("Sum of equal sines at 220, 330", lambda: play(tones([220,330]))),    
+]
+
+SAW = [
     ("Saw with 2 harmonics", lambda: play(saw(max_harm=2))),
     ("Saw with 3 harmonics", lambda: play(saw(max_harm=3))),
     ("Saw with 5 harmonics", lambda: play(saw(max_harm=5))),
     ("Saw with 10 harmonics", lambda: play(saw(max_harm=10))),
     ("Saw with all harmonics", lambda: play(saw())),
-    
+
+    ("Saw with 5 harmonics, random phases", lambda: play(saw(max_harm=5, random_phase=1))),
+    ("Saw with 10 harmonics, random phases", lambda: play(saw(max_harm=10, random_phase=1))),
+    ("Saw with all harmonics, random phases", lambda: play(saw(random_phase=1))),
+]
+
+SQUARE = [  
     ("Square with 2 harmonics", lambda: play(square(max_harm=3))),
     ("Square with 3 harmonics", lambda: play(square(max_harm=5))),    
     ("Square with 5 harmonics", lambda: play(square(max_harm=9))),
     ("Square with 10 harmonics", lambda: play(square(max_harm=19))),
     ("Square with all harmonics", lambda: play(square())),
     
+    ("Square with 5 harmonics, random phases", lambda: play(square(max_harm=9, random_phase=1))),
+    ("Square with 10 harmonics, random phases", lambda: play(square(max_harm=19, random_phase=1))),
+    ("Square with all harmonics, random phases", lambda: play(square(random_phase=1))),
+]
+
+TRIANGLE = [   
     ("Triangle with 2 harmonics", lambda: play(tri(max_harm=3))),
     ("Triangle with 3 harmonics", lambda: play(tri(max_harm=5))),    
     ("Triangle with 5 harmonics", lambda: play(tri(max_harm=9))),
     ("Triangle with 10 harmonics", lambda: play(tri(max_harm=19))),
     ("Triangle with all harmonics", lambda: play(tri())),
-    
-    ("Saw with 5 harmonics, random phases", lambda: play(saw(max_harm=5, random_phase=1))),
-    ("Saw with 10 harmonics, random phases", lambda: play(saw(max_harm=10, random_phase=1))),
-    ("Saw with all harmonics, random phases", lambda: play(saw(random_phase=1))),
 
-    ("Square with 5 harmonics", lambda: play(square(max_harm=9, random_phase=1))),
-    ("Square with 10 harmonics", lambda: play(square(max_harm=19, random_phase=1))),
-    ("Square with all harmonics", lambda: play(square(random_phase=1))),
-
-    ("Triangle with 5 harmonics", lambda: play(tri(max_harm=9, random_phase=1))),
-    ("Triangle with 10 harmonics", lambda: play(tri(max_harm=19, random_phase=1))),
-    ("Triangle with all harmonics", lambda: play(tri(random_phase=1))),
+    ("Triangle with 5 harmonics, random phases", lambda: play(tri(max_harm=9, random_phase=1))),
+    ("Triangle with 10 harmonics, random phases", lambda: play(tri(max_harm=19, random_phase=1))),
+    ("Triangle with all harmonics, random phases", lambda: play(tri(random_phase=1))),
 ]
 
-def demo():
+NOISE = [   
+    ("White noise", lambda: play(noise())),
+    ("Pink noise", lambda: play(noise(shape=PINK))),
+    ("Brown noise", lambda: play(noise(shape=BROWN))),
+    ("Blue noise", lambda: play(noise(shape=BLUE))),
+    ("Violet noise", lambda: play(noise(shape=VIOLET))),
+]
+
+HITS = [
+    ("White noise transient", lambda: play(noise() * envelope())),
+    ("Pink noise transient", lambda: play(noise(shape=PINK) * envelope())),
+    ("Brown noise transient", lambda: play(noise(shape=BROWN) * envelope())),
+    ("Blue noise transient", lambda: play(noise(shape=BLUE) * envelope())),
+    
+    ("Pink noise transient plus low saw", lambda: play(noise(shape=PINK) * envelope() + saw(55) * envelope(decay=0.2))),
+    ("Blue noise transient plus high saw", lambda: play(noise(shape=BLUE) * envelope() + saw(4400) * envelope(decay=0.1))),
+    ("Brown noise transient plus low square", lambda: play(noise(shape=BROWN) * envelope() + square(30) * envelope(decay=0.1))),
+]
+
+def demo(demos=SIMPLE):
     """
     Simple looping shortcut menu for triggering some
-    examples in tutorial 1. 
+    of the above examples in tutorial 1. 
     """
     while True:
         print()
-        for ii, (label, _) in enumerate(DEMOS):
+        for ii, (label, _) in enumerate(demos):
             print(f'{ii}: {label}')
         
         opt = input("Choose option: ")
         
         if opt:
             try:
-                DEMOS[int(opt)][1]()
+                demos[int(opt)][1]()
             except:
                 print('not recognised')
         else:
