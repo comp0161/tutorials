@@ -1,0 +1,98 @@
+
+-- synchronised voices with nearby pitches and same timbre
+-- typically merge into a single stream
+
+d1 $ n "[e4 ~]*8" # s "superhammond"
+
+d2 $ n "[c4 ~]*8" # s "superhammond"
+
+hush
+
+-- do these segregate into distinct streams based on timing?
+
+d1 $ n "[e4 ~]*8" # s "superhammond"
+
+d2 $ n "[~ c4]*8" # s "superhammond"
+
+hush
+
+-- do these segregate into distinct streams based on location?
+
+d1 $ n "[e4 ~]*8" # s "superhammond" # pan 0
+
+d2 $ n "[c4 ~]*8" # s "superhammond" # pan 1
+
+hush
+
+-- do these segregate into distinct streams based on pitch?
+
+d1 $ n "[e3 ~]*8" # s "superhammond"
+
+d2 $ n "[c6 ~]*8" # s "superhammond"
+
+hush
+
+-- do these segregate into distinct streams based on timbre?
+
+d1 $ n "[e4 ~]*8" # s "superzow"
+
+d2 $ n "[c4 ~]*8" # s "superhammond"
+
+hush
+
+-- combining all the above we should get well separated streams
+
+d1 $ n "[e3 ~]*8" # s "superzow" # pan 0
+
+d2 $ n "[~ c6]*8" # s "superhammond" # pan 1
+
+hush
+
+
+-- so far each stream has maintained the same note
+-- how about if they go up and down?
+
+d1 $ n "c4 d4 e4 f4 g4 a4 b4 c5 d5 c5 b4 a4 g4 f4 e4 d4" # s "superpiano" # pan 0.5
+
+d2 $ n "c5 b4 a4 g4 f4 e4 d4 c4 d4 e4 f4 g4 a4 b4 c5 d5" # s "superpiano" # pan 0.5
+
+hush
+
+-- shift the pitches further apart
+
+d1 $ n "c5 d5 e5 f5 g5 a5 b5 c6 d6 c6 b5 a5 g5 f5 e5 d5" # s "superpiano" # pan 0.5
+
+d2 $ n "c4 b3 a3 g3 f3 e3 d3 c3 d3 e3 f3 g3 a3 b3 c4 d4" # s "superpiano" # pan 0.5
+
+hush
+
+-- ok, how about if they are rhythmically distinct?
+
+d1 $ n "c5 b4 a4 g4 f4 e4 d4 c4 d4 e4 f4 g4 a4 b4" # s "superpiano" # pan 0.5
+
+d2 $ n "e4 d4 e4 f4 g4 a4 b4 c5 b4 a4 g4 f4" # s "superpiano" # pan 0.5
+
+d3 $ n "a4 g4 f4 e4 f4 g4 a4 b4 c5 b4" # s "superpiano" # pan 0.5
+
+hush
+
+-- ok, let's set up a scene with very distinct elements
+do
+    resetCycles
+    d1 $ s "~ [sd*3 sd*2]" # pan 0
+    d2 $ n "[g5 c5] [f4 g4] [e5 ~ c5] [f4 ~ g4]" # s "superpiano" # pan 1
+    d3 $ "koy" # shape "0.8" # gain "1"
+
+hush
+
+do
+  let
+    pat = stack [
+        sound "~ [sd*3 sd*2]" # pan 0,
+        note "[g5 c5] [f4 g4] [e5 ~ c5] [f4 ~ g4]" # sound "superpiano" # pan 1,
+        sound "koy" # shape "0.8" # gain "1"
+      ]
+  resetCycles
+  d1 $ seqP [
+    (0, 4, pat)
+    ]
